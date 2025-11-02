@@ -112,8 +112,11 @@ class ToneColorConverter(OpenVoiceBaseClass):
 
 
     def extract_se(self, ref_wav_list, se_save_path=None):
+        print("check1")
         if isinstance(ref_wav_list, str):
             ref_wav_list = [ref_wav_list]
+        
+        print("check1")
         
         device = self.device
         hps = self.hps
@@ -132,9 +135,13 @@ class ToneColorConverter(OpenVoiceBaseClass):
                 gs.append(g.detach())
         gs = torch.stack(gs).mean(0)
 
+        print("check1")
+
         if se_save_path is not None:
             os.makedirs(os.path.dirname(se_save_path), exist_ok=True)
             torch.save(gs.cpu(), se_save_path)
+
+        print("check1")
 
         return gs
 
