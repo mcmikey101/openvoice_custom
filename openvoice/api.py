@@ -9,6 +9,8 @@ import librosa
 from openvoice.text import text_to_sequence
 from openvoice.mel_processing import spectrogram_torch
 from openvoice.models import SynthesizerTrn
+import matplotlib.pyplot as plt
+import librosa.display
 
 
 class OpenVoiceBaseClass(object):
@@ -109,14 +111,9 @@ class ToneColorConverter(OpenVoiceBaseClass):
             self.watermark_model = None
         self.version = getattr(self.hps, '_version_', "v1")
 
-
-
     def extract_se(self, ref_wav_list, se_save_path=None):
-        print("check1")
         if isinstance(ref_wav_list, str):
             ref_wav_list = [ref_wav_list]
-        
-        print("check1")
         
         device = self.device
         hps = self.hps
@@ -135,13 +132,9 @@ class ToneColorConverter(OpenVoiceBaseClass):
                 gs.append(g.detach())
         gs = torch.stack(gs).mean(0)
 
-        print("check1")
-
         if se_save_path is not None:
             os.makedirs(os.path.dirname(se_save_path), exist_ok=True)
             torch.save(gs.cpu(), se_save_path)
-
-        print("check1")
 
         return gs
 
@@ -165,6 +158,21 @@ class ToneColorConverter(OpenVoiceBaseClass):
                 return audio
             else:
                 soundfile.write(output_path, audio, hps.data.sampling_rate)
+
+    def get_spectrogram_se(self, audio_src_path):
+        hps = self.hps
+
+        y, sr = librosa.load(audio_src_path, sr=hps.data.sampling_rate)  # forces resampling to sr_target
+        y = torch.FloatTensor(y).to(self.device)
+        y = y.unsqueeze(0)
+
+        spec = spectrogram_torch(y, n_fft=hps.data.filter_length, sampling_rate=hps.data.sampling_rate, 
+                          hop_size=hps.data.hop_length, win_size=hps.data.win_length, center=False)
+
+        with torch.no_grad():
+            g = self.model.ref_enc(spec.transpose(1, 2)).unsqueeze(-1)
+
+        return g
     
     def add_watermark(self, audio, message):
         if self.watermark_model is None:
